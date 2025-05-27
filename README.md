@@ -84,5 +84,3 @@ Below are some screenshots of the app:
   <img src="screenshots/home.jpg" alt="Home Screen" width="250"/>
   <img src="screenshots/forecast.jpg" alt="Forecast Screen" width="250"/>
 </p>
-
-> Place your images in the `screenshots/` folder. You can add more screenshots as needed.
