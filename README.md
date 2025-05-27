@@ -75,3 +75,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - Weather data provided by [WeatherAPI](https://www.weatherapi.com/)
 - Icons by [Material Icons](https://fonts.google.com/icons)
+
+## Screenshots
+
+Below are some screenshots of the app:
+
+<p align="center">
+  <img src="screenshots/home.jpg" alt="Home Screen" width="250"/>
+  <img src="screenshots/forecast.jpg" alt="Forecast Screen" width="250"/>
+</p>
+
+> Place your images in the `screenshots/` folder. You can add more screenshots as needed.
