@@ -27,12 +27,12 @@ A modern weather application built with Flutter, featuring Material 3 design and
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/f1sh-weather.git
+git clone https://github.com/lostf1sh/f1shWeather.git
 ```
 
 2. Navigate to the project directory:
 ```bash
-cd f1sh-weather
+cd f1shWeather
 ```
 
 3. Install dependencies:
