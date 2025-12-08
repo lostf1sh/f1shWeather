@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dynamic_color/dynamic_color.dart';
-import 'screens/weather_home_page.dart';
+import 'screens/main_wrapper.dart';
 import 'screens/about_page.dart';
 import 'screens/privacy_policy_page.dart';
 import 'screens/terms_of_use_page.dart';
@@ -87,10 +87,11 @@ class _MyAppState extends State<MyApp> {
             '/privacy': (context) => const PrivacyPolicyPage(),
             '/terms': (context) => const TermsOfUsePage(),
           },
-          home: WeatherHomePage(
+          home: MainWrapper(
             onThemeChanged: updateTheme,
             onMetricSystemChanged: updateMetricSystem,
             useMetricSystem: _useMetricSystem,
+            isDarkMode: _isDarkMode,
           ),
         );
       },
@@ -98,10 +99,30 @@ class _MyAppState extends State<MyApp> {
   }
 
   ThemeData _buildTheme(ColorScheme colorScheme) {
+    // Expressive Material 3 adjustments
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      textTheme: GoogleFonts.poppinsTextTheme().apply(
+      textTheme: GoogleFonts.poppinsTextTheme().copyWith(
+        displayLarge: GoogleFonts.poppins(
+          fontWeight: FontWeight.w800,
+          fontSize: 64,
+          height: 1.1,
+        ),
+        displayMedium: GoogleFonts.poppins(
+          fontWeight: FontWeight.w800,
+          fontSize: 48,
+          height: 1.15,
+        ),
+        headlineLarge: GoogleFonts.poppins(
+          fontWeight: FontWeight.w800,
+          fontSize: 32,
+        ),
+        titleLarge: GoogleFonts.poppins(
+          fontWeight: FontWeight.w700,
+          fontSize: 22,
+        ),
+      ).apply(
         bodyColor: colorScheme.onSurface,
         displayColor: colorScheme.onSurface,
       ),
@@ -109,17 +130,36 @@ class _MyAppState extends State<MyApp> {
         filled: true,
         fillColor: colorScheme.surfaceContainerHighest,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(30), // Expressive full-rounded
           borderSide: BorderSide.none,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       ),
       cardTheme: CardTheme(
-        elevation: 2,
+        elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(28), // Expressive large corner radius
         ),
+        clipBehavior: Clip.antiAlias,
         color: colorScheme.surfaceContainerHigh,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          textStyle: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        height: 80,
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
       ),
     );
   }

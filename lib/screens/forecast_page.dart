@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:convert';
 import '../constants/api_constants.dart';
 
@@ -54,15 +55,29 @@ class _ForecastPageState extends State<ForecastPage> {
             'uv': data['current']['uv'],
             'condition': data['current']['condition'],
           };
-          _hourlyForecast = (data['forecast']['forecastday'][0]['hour'] as List)
-              .sublist(0, 6)
-              .map<Map<String, dynamic>>((hour) => {
-                    'time': hour['time'].split(' ')[1],
-                    'temp_c': hour['temp_c'],
-                    'temp_f': hour['temp_f'],
-                    'icon': hour['condition']['icon'],
-                  })
-              .toList();
+          // Get next 24 hours (or as many as available for today/tomorrow overlap)
+          // Simplified to next few hours for now from the first day
+          // Better approach: combine hours from today and tomorrow
+          List hours = [];
+          if (data['forecast']['forecastday'].length > 0) {
+             hours.addAll(data['forecast']['forecastday'][0]['hour']);
+          }
+          if (data['forecast']['forecastday'].length > 1) {
+             hours.addAll(data['forecast']['forecastday'][1]['hour']);
+          }
+
+          final now = DateTime.now();
+          // Filter hours after now
+          _hourlyForecast = hours.where((h) {
+            final t = DateTime.parse(h['time']); // 2024-01-01 00:00
+            return t.isAfter(now);
+          }).take(12).map<Map<String, dynamic>>((hour) => {
+            'time': hour['time'].split(' ')[1],
+            'temp_c': hour['temp_c'],
+            'temp_f': hour['temp_f'],
+            'icon': hour['condition']['icon'],
+          }).toList();
+
           _forecast = (data['forecast']['forecastday'] as List)
               .map<Map<String, dynamic>>((day) => {
                     'date': day['date'],
@@ -96,14 +111,18 @@ class _ForecastPageState extends State<ForecastPage> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('f1sh Weather',
-            style: textTheme.titleLarge?.copyWith(
+        title: Text(widget.city,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             )),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: _loading
           ? Center(
@@ -117,93 +136,60 @@ class _ForecastPageState extends State<ForecastPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildCurrentWeather(),
-                      const SizedBox(height: 24),
+                      _buildCurrentDetails(),
+                      const SizedBox(height: 32),
                       _buildHourlyForecast(),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 32),
                       _buildDailyForecast(),
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
     );
   }
 
-  Widget _buildCurrentWeather() {
-    if (_currentWeather == null) return const SizedBox.shrink();
-    final colorScheme = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Now',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge),
-                      Text(_currentWeather!['condition']['text'],
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium),
-                    ],
-                  ),
-                ),
-                Text(widget.useMetricSystem
-                    ? '${_currentWeather!['temp'].toStringAsFixed(1)}°C'
-                    : '${_currentWeather!['temp_f'].toStringAsFixed(1)}°F',
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          color: colorScheme.primary,
-                        )),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              alignment: WrapAlignment.spaceAround,
-              children: [
-                _buildWeatherDetail(
-                    'Feels Like',
-                    widget.useMetricSystem
-                        ? '${_currentWeather!['feels_like'].toStringAsFixed(1)}°C'
-                        : '${_currentWeather!['feels_like_f'].toStringAsFixed(1)}°F'),
-                _buildWeatherDetail('Humidity',
-                    '${_currentWeather!['humidity']}%'),
-                _buildWeatherDetail('Wind',
-                    widget.useMetricSystem
-                        ? '${_currentWeather!['wind_kph']} km/h'
-                        : '${_currentWeather!['wind_mph']} mph'),
-                _buildWeatherDetail(
-                    'UV', _currentWeather!['uv'].toString()),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+  Widget _buildCurrentDetails() {
+     if (_currentWeather == null) return const SizedBox.shrink();
+     final colorScheme = Theme.of(context).colorScheme;
+
+     return Container(
+       padding: const EdgeInsets.all(24),
+       decoration: BoxDecoration(
+         color: colorScheme.surfaceContainerHighest,
+         borderRadius: BorderRadius.circular(32),
+       ),
+       child: Column(
+         children: [
+           Text('Current Conditions',
+             style: Theme.of(context).textTheme.titleMedium?.copyWith(
+               color: colorScheme.onSurfaceVariant
+             )
+           ),
+           const SizedBox(height: 16),
+           Row(
+             mainAxisAlignment: MainAxisAlignment.spaceAround,
+             children: [
+               _buildDetailItem(Icons.thermostat, 'Feels Like',
+                 widget.useMetricSystem
+                   ? '${_currentWeather!['feels_like']}°'
+                   : '${_currentWeather!['feels_like_f']}°'),
+               _buildDetailItem(Icons.water_drop, 'Humidity', '${_currentWeather!['humidity']}%'),
+               _buildDetailItem(Icons.sunny, 'UV Index', '${_currentWeather!['uv']}'),
+             ],
+           ),
+         ],
+       ),
+     ).animate().slideY(begin: 0.1, duration: 400.ms, curve: Curves.easeOut);
   }
 
-  Widget _buildWeatherDetail(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(label,
-              style: Theme.of(context).textTheme.bodySmall),
-          Text(value,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  )),
-        ],
-      ),
+  Widget _buildDetailItem(IconData icon, String label, String value) {
+    return Column(
+      children: [
+        Icon(icon, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(height: 4),
+        Text(value, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
     );
   }
 
@@ -212,85 +198,55 @@ class _ForecastPageState extends State<ForecastPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
           child: Text('Hourly Forecast',
-              style: Theme.of(context).textTheme.titleLarge),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold
+              )),
         ),
+        const SizedBox(height: 16),
         SizedBox(
           height: 160,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: _hourlyForecast.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final hour = _hourlyForecast[index];
-              return Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-                    width: 1,
-                  ),
+              return Container(
+                width: 80,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(50), // Pill shape
                 ),
-                child: Container(
-                  width: 100,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Theme.of(context).colorScheme.surfaceContainerHighest,
-                        Theme.of(context).colorScheme.surfaceContainerHigh,
-                      ],
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      hour['time'],
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.bold
+                      ),
                     ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        hour['time'],
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
-                        textAlign: TextAlign.center,
+                    Image.network(
+                      'https:${hour['icon']}',
+                      width: 40,
+                      height: 40,
+                    ),
+                    Text(
+                      widget.useMetricSystem
+                          ? '${hour['temp_c'].toStringAsFixed(0)}°'
+                          : '${hour['temp_f'].toStringAsFixed(0)}°',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Image.network(
-                          'https:${hour['icon']}',
-                          width: 36,
-                          height: 36,
-                          errorBuilder: (context, error, stackTrace) => Icon(
-                            Icons.cloud_off,
-                            size: 36,
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        widget.useMetricSystem
-                            ? '${hour['temp_c'].toStringAsFixed(0)}°C'
-                            : '${hour['temp_f'].toStringAsFixed(0)}°F',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              );
+              ).animate(delay: (50 * index).ms).slideX(begin: 0.2, curve: Curves.easeOut);
             },
           ),
         ),
@@ -302,116 +258,94 @@ class _ForecastPageState extends State<ForecastPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Text('5-Day Forecast',
-              style: Theme.of(context).textTheme.titleLarge),
+         Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Text('Daily Forecast',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold
+              )),
         ),
+        const SizedBox(height: 16),
         ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: _forecast.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final day = _forecast[index];
             final date = DateTime.parse(day['date']);
-            return Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-                  width: 1,
-                ),
+            final weekDay = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][date.weekday - 1];
+
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(24),
               ),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).colorScheme.surfaceContainerHighest,
-                      Theme.of(context).colorScheme.surfaceContainerHigh,
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 80,
-                      child: Text(
-                        '${date.day}/${date.month}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Image.network(
-                        'https:${day['icon']}',
-                        width: 40,
-                        height: 40,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          LinearProgressIndicator(
-                            value: day['chance_of_rain'] / 100,
-                            backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
-                            color: Theme.of(context).colorScheme.primary,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Rain Chance: ${day['chance_of_rain']}%',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 60,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          widget.useMetricSystem
-                              ? '${day['max_c'].toStringAsFixed(0)}°C'
-                              : '${day['max_f'].toStringAsFixed(0)}°F',
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                        Text(
-                          widget.useMetricSystem
-                              ? '${day['min_c'].toStringAsFixed(0)}°C'
-                              : '${day['min_f'].toStringAsFixed(0)}°F',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
+                        Text(weekDay,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        Text('${date.day}/${date.month}',
+                          style: Theme.of(context).textTheme.bodySmall),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  Image.network(
+                    'https:${day['icon']}',
+                    width: 40,
+                    height: 40,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(day['desc'],
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium),
+                        if (day['chance_of_rain'] > 0)
+                        Row(
+                          children: [
+                            Icon(Icons.water_drop, size: 12, color: Colors.blue),
+                            Text('${day['chance_of_rain']}%', style: TextStyle(fontSize: 12, color: Colors.blue)),
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                       Text(
+                        widget.useMetricSystem
+                            ? '${day['max_c'].toStringAsFixed(0)}°'
+                            : '${day['max_f'].toStringAsFixed(0)}°',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        widget.useMetricSystem
+                            ? '${day['min_c'].toStringAsFixed(0)}°'
+                            : '${day['min_f'].toStringAsFixed(0)}°',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant
+                        ),
+                      ),
+                    ],
+                  )
+                ],
               ),
-            );
+            ).animate(delay: (100 * index).ms).slideY(begin: 0.2, curve: Curves.easeOut);
           },
         ),
       ],
     );
   }
-} 
+}
