@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:intl/intl.dart';
 import 'dart:convert';
 import '../models/weather_data.dart';
 import '../constants/api_constants.dart';
@@ -235,33 +236,24 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: SearchAnchor(
-        builder: (BuildContext context, SearchController controller) {
-          return SearchBar(
-            controller: _cityController,
-            hintText: 'Search city...',
-            padding: const MaterialStatePropertyAll<EdgeInsets>(
-                EdgeInsets.symmetric(horizontal: 16.0)),
-            onSubmitted: (_) => _fetchWeather(),
-            leading: const Icon(Icons.search),
-            trailing: [
-              IconButton(
-                icon: const Icon(Icons.my_location),
-                onPressed: _fetchWeatherByLocation,
-                tooltip: 'Use My Location',
-              ),
-            ],
-            elevation: MaterialStateProperty.all(0),
-            backgroundColor: MaterialStateProperty.all(
-              Theme.of(context).colorScheme.surfaceContainerHighest,
-            ),
-          );
-        },
-        suggestionsBuilder: (BuildContext context, SearchController controller) {
-          return List<ListTile>.generate(0, (int index) {
-            return ListTile(title: Text('Item $index'));
-          });
-        },
+      child: SearchBar(
+        controller: _cityController,
+        hintText: 'Search city...',
+        padding: const MaterialStatePropertyAll<EdgeInsets>(
+            EdgeInsets.symmetric(horizontal: 16.0)),
+        onSubmitted: (_) => _fetchWeather(),
+        leading: const Icon(Icons.search),
+        trailing: [
+          IconButton(
+            icon: const Icon(Icons.my_location),
+            onPressed: _fetchWeatherByLocation,
+            tooltip: 'Use My Location',
+          ),
+        ],
+        elevation: MaterialStateProperty.all(0),
+        backgroundColor: MaterialStateProperty.all(
+          Theme.of(context).colorScheme.surfaceContainerHighest,
+        ),
       ),
     );
   }
@@ -377,7 +369,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                             ),
                           ),
                           Text(
-                            DateTime.now().toString().split(' ')[0], // Simple date
+                            DateFormat.yMMMMd().format(DateTime.now()),
                             style: textTheme.bodyLarge?.copyWith(
                               color: colorScheme.onPrimaryContainer.withOpacity(0.7),
                             ),
@@ -407,6 +399,11 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                             width: 100,
                             height: 100,
                             fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              Icons.wb_sunny,
+                              size: 80,
+                              color: colorScheme.onPrimaryContainer,
+                            ),
                           )
                         : Icon(Icons.wb_sunny, size: 80, color: colorScheme.onPrimaryContainer),
                   ],
@@ -442,7 +439,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
               _buildStatCard(
                 Icons.water_drop_outlined,
                 'Humidity',
-                '${_currentWeatherData!.humidity?.toStringAsFixed(0)}%',
+                '${_currentWeatherData!.humidity?.toStringAsFixed(0) ?? 'N/A'}%',
                 colorScheme.secondaryContainer,
                 colorScheme.onSecondaryContainer,
               ),

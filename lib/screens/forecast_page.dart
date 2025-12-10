@@ -69,7 +69,8 @@ class _ForecastPageState extends State<ForecastPage> {
           final now = DateTime.now();
           // Filter hours after now
           _hourlyForecast = hours.where((h) {
-            final t = DateTime.parse(h['time']); // 2024-01-01 00:00
+            final t = DateTime.tryParse(h['time']); // 2024-01-01 00:00
+            if (t == null) return false;
             return t.isAfter(now);
           }).take(12).map<Map<String, dynamic>>((hour) => {
             'time': hour['time'].split(' ')[1],
@@ -194,6 +195,7 @@ class _ForecastPageState extends State<ForecastPage> {
   }
 
   Widget _buildHourlyForecast() {
+    if (_hourlyForecast.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -234,6 +236,11 @@ class _ForecastPageState extends State<ForecastPage> {
                       'https:${hour['icon']}',
                       width: 40,
                       height: 40,
+                      errorBuilder: (context, error, stackTrace) => Icon(
+                        Icons.cloud,
+                        size: 40,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
                     ),
                     Text(
                       widget.useMetricSystem
@@ -300,6 +307,11 @@ class _ForecastPageState extends State<ForecastPage> {
                     'https:${day['icon']}',
                     width: 40,
                     height: 40,
+                    errorBuilder: (context, error, stackTrace) => Icon(
+                      Icons.cloud,
+                      size: 40,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -312,8 +324,8 @@ class _ForecastPageState extends State<ForecastPage> {
                         if (day['chance_of_rain'] > 0)
                         Row(
                           children: [
-                            Icon(Icons.water_drop, size: 12, color: Colors.blue),
-                            Text('${day['chance_of_rain']}%', style: TextStyle(fontSize: 12, color: Colors.blue)),
+                            Icon(Icons.water_drop, size: 12, color: Theme.of(context).colorScheme.primary),
+                            Text('${day['chance_of_rain']}%', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary)),
                           ],
                         )
                       ],
